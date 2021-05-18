@@ -42,19 +42,17 @@ def get_periods(sample):
 
 
 def psola(sample, peaks, scale):
-    new_signal = []
-
+    new_signal = np.zeros(len(sample))
+    print(new_signal)
     for x in range(len(peaks)-1):
         period = peaks[x+1] - peaks[x]
         new_period = int(period * scale)
 
         if new_period <= period:
-            new_signal.extend(sample[peaks[x]:period])
+            new_signal[peaks[x]:period].sum(sample[peaks[x]:period])
         else:
-            #print(peaks[x], peaks[x+1])
-            #print(sample[peaks[x]:peaks[x+1]])
-            new_signal.extend(sample[peaks[x]:peaks[x+1]])
-            new_signal.extend([0 for x in range(new_period - period)])
+            new_signal[peaks[x]:peaks[x+1]].sum(sample[peaks[x]:peaks[x+1]])
+            new_signal[peaks[x+1]:period].sum([0 for x in range(new_period - period)])
 
     return new_signal
 
@@ -145,12 +143,14 @@ peaks = get_periods(sample)
 
 new_signal = psola(sample, peaks, 1.1)
 
-fig, axs = plt.subplots(2, 1, sharex=True)
+#fig, axs = plt.subplots(2, 1, sharex=True)
 
-axs[0].plot(sample)
-axs[0].plot(peaks, sample[peaks], 'X')
-axs[1].plot(new_signal, color="orange")
+##axs[0].plot(sample)
+#axs[0].plot(peaks, sample[peaks], 'X')
+#axs[1].plot(new_signal, color="orange")
+new_signal = butter_lowpass_filter(new_signal, 500, 44100, order=4)
 
+plt.plot(new_signal)
 
 plt.show()
 
