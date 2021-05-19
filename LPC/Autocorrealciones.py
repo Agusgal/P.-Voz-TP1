@@ -19,10 +19,15 @@ def corr_short_time(sgn, n, L):
     ----------
     retorna correlacion short time en instante n
     """
-    L *= 10e-3 * 44100
+    pos = L * 10e-3 * 44100
 
     # ventana rectangular
-    window = [i >= n and i <= n + L - 1 for i in range(len(sgn))]
+    # window = [i >= n and i <= n + L - 1 for i in range(len(sgn))]
+
+    # Hamming
+    window = np.zeros(len(sgn))
+    hamming = np.hamming(L)
+    window[n:n + L] = hamming
 
     # arreglo nuevo
     arr_nuevo = np.multiply(sgn, window)
@@ -32,7 +37,7 @@ def corr_short_time(sgn, n, L):
 
 
 def LPC(sgn, M):
-    r = corr_short_time(sgn, len(sgn) // 2, 20)
+    r = corr_short_time(sgn, len(sgn) // 2, 25)
     center_r = len(r) // 2
 
     r_M = r[center_r: center_r + M]
@@ -40,6 +45,11 @@ def LPC(sgn, M):
 
     alphas = solve_toeplitz(r_M, r_M2)
     return alphas
+
+
+def overlap_add(sgn_arr):
+    # sgn_arr: signal array
+    pass
 
 
 def plot_psd(signals, fs, Ms):
@@ -57,35 +67,28 @@ def plot_psd(signals, fs, Ms):
 
         plt.semilogx(freqs, signal_psd, label=f'M = {M}')
 
-    plt.legend()
 
 if __name__ == '__main__':
-    filename = 'DaftPunk.wav'
+    filename = '../Resources/DaftPunk.wav'
     filename2 = '../Resources/Lorde.wav'
-    sample, sr = librosa.load(filename2, sr=44100)
+    sample, sr = librosa.load(filename, sr=44100)
+    sample2, sr2 = librosa.load(filename2, sr=44100)
 
-    plt.plot(np.linspace(0, 30, len(sample)), sample)
+
+
+    alphas = LPC(sample2, 12)
+    b = np.hstack((1, -alphas))
+
+    alphasL = librosa.lpc(sample2, 20)
+    bL = np.hstack((1, -alphasL[1:]))
+
+    error = signal.lfilter(b, [1], sample2)
+    sample_hat = signal.lfilter(alphas, [1], sample2)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    ax.plot(sample2, color='blue', label='Signal')
+    ax.plot(error, color='black', label='Error')
+
+    #plt.xlim([836700, 836850])
     plt.show()
-
-    alphas = LPC(sample, 20)
-
-    b = np.hstack([[0], -1 * alphas[1:]])
-    sample_hat = signal.lfilter(b, [1], sample)
-
-    fig, ax = plt.subplots()
-    ax.plot(sample)
-    ax.plot(sample_hat, linestyle='--')
-    ax.legend(['y', 'y_hat'])
-    ax.set_title('LP Model Forward Prediction')
-    plt.show()
-
-    b2 = np.hstack([[1], alphas[1:]])
-    err = signal.lfilter(b2, [1], sample)
-    plt.plot(np.linspace(0, 30, len(sample)), err)
-    plt.show()
-
-    alphasLibrosa = librosa.lpc(sample, 5)
-    b3 = np.hstack([[1], -1 * alphasLibrosa[1:]])
-    sampleLibrosa = signal.lfilter(b3, [1], sample)
-
-
